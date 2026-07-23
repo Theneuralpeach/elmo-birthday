@@ -28,8 +28,17 @@
     -webkit-text-size-adjust: 100%;
     overscroll-behavior: none;
   }
-  .stagewrap, .pad, .start-btn{
+  .stagewrap, .start-btn{
     touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* the kit takes no gestures at all, so two-finger simultaneous hits are read as
+     two separate strikes instead of a pinch */
+  .kit, .pad{
+    touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     -webkit-touch-callout: none;
@@ -587,8 +596,15 @@
     var AC = window.AudioContext || window.webkitAudioContext;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 0.9;
-    master.connect(ctx.destination);
+    master.gain.value = 3.2;              // drums much louder than the backing track
+    var limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -4;         // catch the peaks so the boost never clips
+    limiter.knee.value = 6;
+    limiter.ratio.value = 14;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.14;
+    master.connect(limiter);
+    limiter.connect(ctx.destination);
 
     distortion = ctx.createWaveShaper();
     distortion.curve = makeDistortionCurve(420);
@@ -808,9 +824,19 @@
     lastHit = Date.now();
   }
 
+  // pointerdown fires once per finger, so several drums can be struck at the exact
+  // same instant. click() would serialize taps and swallow simultaneous hits.
   pads.forEach(function(pad){
-    pad.addEventListener('click', function(){
+    pad.addEventListener('pointerdown', function(e){
       if(!ctx || !running) return;
+      e.preventDefault();
+      hitPad(pad, pad.getAttribute('data-pad'));
+    });
+    // keyboard fallback only (Enter/Space give a click with detail 0);
+    // real taps have detail>=1 and are already handled by pointerdown above.
+    pad.addEventListener('click', function(e){
+      if(!ctx || !running) return;
+      if(e.detail !== 0) return;
       hitPad(pad, pad.getAttribute('data-pad'));
     });
   });
@@ -866,7 +892,7 @@
   function resumeGame(){
     if(!gameAudio || finaleTriggered) return;
     if(gameAudio.paused){
-      gameAudio.volume = 0.8;
+      gameAudio.volume = 0.5;              // backing track sits under the drums
       var p = gameAudio.play();
       if(p && p.catch){ p.catch(function(){}); }
     }
