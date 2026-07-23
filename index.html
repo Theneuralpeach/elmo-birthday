@@ -779,7 +779,7 @@
     var idleFor = Date.now() - lastHit;
 
     if(idleFor < ACTIVE_WINDOW){
-      setStatus('Now playing: Happy Birthday (Metal Cover)', false);
+      setStatus('Now playing: Happy Birthday', false);
       if(now >= nextNoteTime){
         var n = melody[noteIndex];
         playNote(noteFreq[n[0]], now, n[1] * 0.9);
