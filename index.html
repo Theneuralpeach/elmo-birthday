@@ -783,15 +783,26 @@
     osc.connect(g); g.connect(master);
     osc.start(time); osc.stop(time + 0.32);
 
-    // upper harmonic — carries the tom on small phone speakers where the low
-    // fundamental barely reproduces.
+    // upper harmonic — carries pitch where the low fundamental barely reproduces
     var osc2 = ctx.createOscillator();
-    osc2.type = 'triangle'; osc2.frequency.value = f0 * 1.6;
+    osc2.type = 'triangle'; osc2.frequency.value = f0 * 1.9;
     var g2 = ctx.createGain();
-    g2.gain.setValueAtTime(0.25 * gainMul, time);
-    g2.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
+    g2.gain.setValueAtTime(0.32 * gainMul, time);
+    g2.gain.exponentialRampToValueAtTime(0.001, time + 0.11);
     osc2.connect(g2); g2.connect(master);
-    osc2.start(time); osc2.stop(time + 0.11);
+    osc2.start(time); osc2.stop(time + 0.13);
+
+    // attack transient — a short mid/high burst so the hit is clearly audible on
+    // tiny phone speakers that cannot reproduce the low tom body at all.
+    var noise = ctx.createBufferSource();
+    noise.buffer = noiseBuf;
+    var bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 2600; bp.Q.value = 0.7;
+    var ga = ctx.createGain();
+    ga.gain.setValueAtTime(0.6 * gainMul, time);
+    ga.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    noise.connect(bp); bp.connect(ga); ga.connect(master);
+    noise.start(time); noise.stop(time + 0.06);
   }
 
   function china(time){
@@ -825,7 +836,7 @@
     kick: kick,
     snare: snare,
     floorL: function(t){ tom(t, 130, 80); },
-    floorR: function(t){ tom(t, 120, 74, 2.8); }
+    floorR: function(t){ tom(t, 120, 74, 3.6); }
   };
 
   function songProgress(){
