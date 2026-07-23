@@ -596,15 +596,18 @@
     var AC = window.AudioContext || window.webkitAudioContext;
     ctx = new AC();
     master = ctx.createGain();
-    master.gain.value = 3.2;              // drums much louder than the backing track
+    master.gain.value = 6.0;              // drums way louder than the backing track
     var limiter = ctx.createDynamicsCompressor();
-    limiter.threshold.value = -4;         // catch the peaks so the boost never clips
-    limiter.knee.value = 6;
-    limiter.ratio.value = 14;
-    limiter.attack.value = 0.002;
-    limiter.release.value = 0.14;
+    limiter.threshold.value = -1.5;       // let the level through, only tame true peaks
+    limiter.knee.value = 3;
+    limiter.ratio.value = 8;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.11;
+    var makeup = ctx.createGain();
+    makeup.gain.value = 1.25;             // recover loudness the limiter shaves off
     master.connect(limiter);
-    limiter.connect(ctx.destination);
+    limiter.connect(makeup);
+    makeup.connect(ctx.destination);
 
     distortion = ctx.createWaveShaper();
     distortion.curve = makeDistortionCurve(420);
@@ -871,14 +874,22 @@
     }
   }, 40);
 
+  // Prime an audio element for later programmatic playback WITHOUT any sound
+  // leaking out. Muting during the prime play/pause is what keeps the birthday
+  // song silent while the drum game is still going.
   function primeOne(el){
     if(!el) return;
+    el.muted = true;
+    var restore = function(){
+      try { el.pause(); } catch(e){}
+      el.currentTime = 0;
+      el.muted = false;
+    };
     var p = el.play();
     if(p && p.then){
-      p.then(function(){ el.pause(); el.currentTime = 0; }).catch(function(){});
+      p.then(restore).catch(function(){ el.muted = false; });
     } else {
-      el.pause();
-      el.currentTime = 0;
+      restore();
     }
   }
 
@@ -892,7 +903,8 @@
   function resumeGame(){
     if(!gameAudio || finaleTriggered) return;
     if(gameAudio.paused){
-      gameAudio.volume = 0.5;              // backing track sits under the drums
+      gameAudio.muted = false;
+      gameAudio.volume = 0.4;              // backing track sits well under the drums
       var p = gameAudio.play();
       if(p && p.catch){ p.catch(function(){}); }
     }
@@ -907,13 +919,14 @@
     var t = gameAudio.volume;
     var fade = setInterval(function(){
       t -= 0.12;
-      if(t <= 0){ gameAudio.pause(); gameAudio.currentTime = 0; gameAudio.volume = 0.8; clearInterval(fade); }
+      if(t <= 0){ gameAudio.pause(); gameAudio.currentTime = 0; gameAudio.volume = 0.4; clearInterval(fade); }
       else { gameAudio.volume = Math.max(0, t); }
     }, 40);
   }
 
   function playBgm(){
     if(!bgmAudio) return;
+    bgmAudio.muted = false;
     bgmAudio.currentTime = 0;
     bgmAudio.volume = 0;
     var p = bgmAudio.play();
