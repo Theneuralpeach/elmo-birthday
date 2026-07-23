@@ -771,24 +771,27 @@
     osc.start(time); osc.stop(time + 0.43);
   }
 
-  function tom(time, f0, f1){
+  function tom(time, f0, f1, gainMul){
+    gainMul = gainMul || 1;
     var osc = ctx.createOscillator();
     var g = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(f0, time);
     osc.frequency.exponentialRampToValueAtTime(f1, time + 0.22);
-    g.gain.setValueAtTime(1.0, time);
+    g.gain.setValueAtTime(1.0 * gainMul, time);
     g.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
     osc.connect(g); g.connect(master);
     osc.start(time); osc.stop(time + 0.32);
 
+    // upper harmonic — carries the tom on small phone speakers where the low
+    // fundamental barely reproduces.
     var osc2 = ctx.createOscillator();
     osc2.type = 'triangle'; osc2.frequency.value = f0 * 1.6;
     var g2 = ctx.createGain();
-    g2.gain.setValueAtTime(0.25, time);
-    g2.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+    g2.gain.setValueAtTime(0.25 * gainMul, time);
+    g2.gain.exponentialRampToValueAtTime(0.001, time + 0.09);
     osc2.connect(g2); g2.connect(master);
-    osc2.start(time); osc2.stop(time + 0.1);
+    osc2.start(time); osc2.stop(time + 0.11);
   }
 
   function china(time){
@@ -822,7 +825,7 @@
     kick: kick,
     snare: snare,
     floorL: function(t){ tom(t, 130, 80); },
-    floorR: function(t){ tom(t, 95, 60); }
+    floorR: function(t){ tom(t, 120, 74, 2.8); }
   };
 
   function songProgress(){
