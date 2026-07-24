@@ -857,6 +857,9 @@
   }
 
   function hitPad(el, kind){
+    // iOS suspends the AudioContext when the phone is locked or the tab is
+    // backgrounded; resume it on the next hit so the drums never go silent.
+    if(ctx.state === 'suspended'){ ctx.resume(); }
     padSounds[kind](ctx.currentTime);
     el.classList.add('hit');
     setTimeout(function(){ el.classList.remove('hit'); }, 110);
@@ -910,22 +913,33 @@
     }
   }, 40);
 
+  // Hard safety net: until the finale fires, the birthday song must stay silent.
+  // If anything ever starts it early, this stops it within a frame.
+  setInterval(function(){
+    if(!finaleTriggered && bgmAudio && !bgmAudio.paused){
+      bgmAudio.pause();
+    }
+  }, 60);
+
   // Prime an audio element for later programmatic playback WITHOUT any sound
   // leaking out. Muting during the prime play/pause is what keeps the birthday
   // song silent while the drum game is still going.
+  // Prime an element for later programmatic playback, then leave it MUTED and
+  // paused. It only gets unmuted at the exact moment it should really play
+  // (resumeGame for the drum track, playBgm for the birthday song), so the
+  // birthday song can never leak during the game even if a play() slips through.
   function primeOne(el){
     if(!el) return;
     el.muted = true;
-    var restore = function(){
+    var stop = function(){
       try { el.pause(); } catch(e){}
       el.currentTime = 0;
-      el.muted = false;
     };
     var p = el.play();
     if(p && p.then){
-      p.then(restore).catch(function(){ el.muted = false; });
+      p.then(stop).catch(function(){});
     } else {
-      restore();
+      stop();
     }
   }
 
